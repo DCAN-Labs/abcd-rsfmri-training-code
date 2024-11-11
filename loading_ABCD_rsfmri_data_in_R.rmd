@@ -1,0 +1,58 @@
+---
+title: "Manipulating ABCD rsfmri output in R"
+author: "Eric "Fez" Feczko"
+date: "2024-11-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Raveio install
+
+This will setup raveio, which is needed to load ABCD data into R easily. There are other tools that work as well, however, the organization of the outputs may be difficult to use. 
+
+Raveio requires specific system dependencies:
+
+libhdf5-dev (https://stackoverflow.com/questions/39236025/how-to-install-libhdf5-dev-without-yum-rpm-nor-apt-get)
+fftw (`sudo apt-get install fftw3 fftw3-dev pkg-config`)
+
+```{r raveio install}
+install.packages("raveio", repos = c("https://rave-ieeg.r-universe.dev", "https://cloud.r-project.org"))
+```
+
+## opening .mat files using raveio and reformatting data into a datasheet
+
+The raveio library contains input/output commands for reading matlab v 7.3 files. Below is an example of how to load the file:
+
+```{r open mat file}
+library(raveio)
+path_to_mat_file <- "/home/feczk001/shared/projects/ABCD/abcd-sync/data/ABCD6p0_prerelease/rsfmri_091824/rsfmri/gpnet_corr.mat"
+path_to_info_file <- "/home/feczk001/shared/projects/ABCD/abcd-sync/data/ABCD6p0_prerelease/rsfmri_091824/rsfmri/vol_info.mat"
+gpnet_corr_matfile <- read_mat(path_to_mat_file)
+vol_info_matfile <- read_mat(path_to_info_file)
+```
+## reorganizing data into a dataframe 
+
+The matlab files may need reformatting before data analysis in R, the code below shows one how to create a data frame from the correlations and label it with the participant and session ids as well as the number of "good" quality frames (ntpts). 
+
+```{r organize data into dataframe}
+pid <-  unlist(vol_info_matfile$participant.id)
+sid <- unlist(vol_info_matfile$session.id)
+
+network_corr_label <- paste(gpnet_corr_matfile$net1vec,gpnet_corr_matfile$net2vec, sep = "_")
+corrdata <- data.frame("participant" = pid,"session" = sid, "ntpts" = gpnet_corr_matfile$ntpointvec,gpnet_corr_matfile$corrmat)
+column_labels <- c("participant","session","ntpts",network_corr_label)
+colnames(corrdata) <- column_labels
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
